@@ -1,8 +1,9 @@
 #include <uWS/uWS.h>
-#include <iostream>
 #include "json.hpp"
 #include "PID.h"
 #include <math.h>
+#include <fstream>
+ 
 
 // for convenience
 using json = nlohmann::json;
@@ -11,6 +12,8 @@ using json = nlohmann::json;
 constexpr double pi() { return M_PI; }
 double deg2rad(double x) { return x * pi() / 180; }
 double rad2deg(double x) { return x * 180 / pi(); }
+
+ 
 
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
@@ -33,7 +36,15 @@ int main()
   uWS::Hub h;
 
   PID pid;
-  // TODO: Initialize the pid variable.
+  // Manual Tuning:
+  //pid.Init(0.01,0,0);
+  //pid.Init(0.1,0,0);
+  //pid.Init(0.5,1,0.005);  
+  //pid.Init(0.5,1.5,0.1);
+  //pid.Init(0.5,0,1.0);
+  pid.Init(0.1, 1.5, 0.0005); //determined empirically 
+  //pid.Init(0.3,0.001,20.0);
+   // TODO: Initialize the pid variable.
 
   h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -59,7 +70,15 @@ int main()
           */
           
           // DEBUG
-          std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
+
+          std::cout << "CTE: " << cte << " First Steering Value: " << steer_value << std::endl;
+          
+          steer_value = pid.TotalError();
+          pid.UpdateError(cte);
+ 
+
+ 
+          std::cout << "CTE: " << cte << " Second Steering Value: " << steer_value << std::endl;
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
@@ -98,6 +117,7 @@ int main()
   h.onDisconnection([&h](uWS::WebSocket<uWS::SERVER> ws, int code, char *message, size_t length) {
     ws.close();
     std::cout << "Disconnected" << std::endl;
+    //
   });
 
   int port = 4567;
